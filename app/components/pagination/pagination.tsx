@@ -6,13 +6,12 @@ import nextArrowBlack from '@/public/icons/arrow_next_black.svg';
 import nextArrowGray from '@/public/icons/arrow_next_gray.svg';
 import { useTheme } from 'next-themes';
 import Image from 'next/image';
-import { MouseEventHandler } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 interface PageButtonProps {
-  goToForward: MouseEventHandler;
-  goToNext: MouseEventHandler;
+  paramKey: string;
   currentPage: number;
-  totalPage: number;
+  lastPage: number;
 }
 
 function getForwardArrowSrc(currentPage: number, theme: string) {
@@ -33,22 +32,40 @@ function getNextArrowSrc(
   return theme === 'dark' ? nextArrowGray : nextArrowBlack;
 }
 
-export default function PageButton({
-  goToForward,
-  goToNext,
+export default function Pagination({
+  paramKey,
   currentPage,
-  totalPage,
+  lastPage,
 }: PageButtonProps) {
+  const searchParams = useSearchParams();
+  const { replace } = useRouter();
+  const pathname = usePathname();
   const { theme } = useTheme();
+
   const buttonStyle =
-    'border border-solid border-gray-600 bg-secondary-foreground p-3';
+    'border border-solid border-gray-600 bg-secondary-foreground p-3 cursor-pointer';
+
+  const goToForwardHandler = () => {
+    const params = new URLSearchParams(searchParams);
+    params.set(paramKey, String(Math.max(currentPage - 1, 1)));
+    replace(`${pathname}?${params.toString()}`);
+  };
+
+  const goToNextHandler = () => {
+    const params = new URLSearchParams(searchParams);
+    params.set(
+      paramKey,
+      String(currentPage !== lastPage ? currentPage + 1 : currentPage)
+    );
+    replace(`${pathname}?${params.toString()}`);
+  };
 
   return (
     <>
       <button
-        className={`${buttonStyle} cursor-pointer rounded-l`}
+        className={`${buttonStyle} rounded-l`}
         type="button"
-        onClick={goToForward}
+        onClick={goToForwardHandler}
         disabled={currentPage === 1}
       >
         <Image
@@ -59,15 +76,15 @@ export default function PageButton({
         />
       </button>
       <button
-        className={`${buttonStyle} cursor-pointer rounded-r`}
+        className={`${buttonStyle} rounded-r`}
         type="button"
-        onClick={goToNext}
-        disabled={totalPage === currentPage}
+        onClick={goToNextHandler}
+        disabled={lastPage === currentPage}
       >
         <Image
           width={16}
           height={16}
-          src={getNextArrowSrc(currentPage, totalPage, theme!)}
+          src={getNextArrowSrc(currentPage, lastPage, theme!)}
           alt="오른쪽을 향하는 꺽쇠 화살표"
         />
       </button>

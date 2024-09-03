@@ -4,9 +4,10 @@ import { SIDE_DASHBOARD_COUNT, TEAM_BASE_URL } from '@/constants/TEAM_BASE_URL';
 import { DashboardDetail } from '@/types/dashboard';
 import makeDashboardArr from '@/utils/makeDashboardResponse';
 import { getCookie } from 'cookies-next';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import PageButton from '../pagination/page-button';
+import Pagination from '../pagination/pagination';
 import SidebarDashboardCard from './sidebar-dashboard-card';
 
 interface SidebarDashboardListProps {
@@ -18,14 +19,17 @@ export default function SidebarDashboardList({
   initialData,
   lastPage,
 }: SidebarDashboardListProps) {
-  const [page, setPage] = useState(1);
   const [dashboardList, setDashboardList] =
     useState<DashboardDetail[]>(initialData);
+  const searchParams = useSearchParams();
+
+  const paramKey = 'sidePage';
+  const currentPage = Number(searchParams.get(paramKey)) || 1;
 
   const token = getCookie('token');
 
   async function fetchData() {
-    const url = `${TEAM_BASE_URL}/dashboards?navigationMethod=pagination&page=${page}&size=${SIDE_DASHBOARD_COUNT}`;
+    const url = `${TEAM_BASE_URL}/dashboards?navigationMethod=pagination&page=${currentPage}&size=${SIDE_DASHBOARD_COUNT}`;
 
     const res = await fetch(url, {
       method: 'GET',
@@ -50,14 +54,13 @@ export default function SidebarDashboardList({
 
     if (
       checkDashboard.length < SIDE_DASHBOARD_COUNT &&
-      dashboards.length >= SIDE_DASHBOARD_COUNT
+      dashboards.length > SIDE_DASHBOARD_COUNT
     ) {
       setDashboardList(
         await makeDashboardArr(
           checkDashboard,
-          page,
-          SIDE_DASHBOARD_COUNT - checkDashboard.length,
-          token
+          currentPage,
+          SIDE_DASHBOARD_COUNT - checkDashboard.length
         )
       );
       return;
@@ -66,17 +69,9 @@ export default function SidebarDashboardList({
     setDashboardList(checkDashboard);
   }
 
-  const handleForward = () => {
-    setPage((prev) => Math.max(prev - 1, 1));
-  };
-
-  const handleNext = () => {
-    setPage((prev) => (prev !== lastPage ? prev + 1 : prev));
-  };
-
   useEffect(() => {
     fetchData();
-  }, [page]);
+  }, [currentPage]);
 
   return (
     <>
@@ -86,11 +81,10 @@ export default function SidebarDashboardList({
         ))}
       </ul>
       <div className="text-center md:flex md:h-10 md:w-20">
-        <PageButton
-          goToForward={handleForward}
-          goToNext={handleNext}
-          currentPage={page}
-          totalPage={lastPage}
+        <Pagination
+          paramKey={paramKey}
+          currentPage={currentPage}
+          lastPage={lastPage}
         />
       </div>
     </>

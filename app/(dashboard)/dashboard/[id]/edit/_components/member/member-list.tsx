@@ -1,8 +1,8 @@
 'use client';
 
-import PageButton from '@/app/components/pagination/page-button';
-import { EDIT_PAGE_DATA_SIZE } from '@/constants/TEAM_BASE_URL';
+import Pagination from '@/app/components/pagination/pagination';
 import { DashboardMembers } from '@/types/members';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { getMember } from '../../actions';
@@ -11,22 +11,25 @@ import MemberCard from './member-card';
 interface MemberListProps {
   dashboardId: number;
   initialData: DashboardMembers[];
+  lastPage: number;
 }
 
 export default function MemberList({
   dashboardId,
   initialData,
+  lastPage,
 }: MemberListProps) {
-  const [page, setPage] = useState(1);
-  const [lastPage, setLastPage] = useState(0);
   const [dataList, setDataList] = useState<DashboardMembers[]>(initialData);
 
+  const searchParams = useSearchParams();
+
+  const paramKey = 'memberPage';
+  const currentPage = Number(searchParams.get(paramKey)) || 1;
+
   async function getData() {
-    const data = await getMember(page, dashboardId);
+    const data = await getMember(currentPage, dashboardId);
     const { members } = data;
     setDataList(members);
-    const { totalCount } = data;
-    setLastPage(Math.ceil(totalCount / EDIT_PAGE_DATA_SIZE));
   }
 
   const deleteData = (memberId: number) => {
@@ -36,17 +39,9 @@ export default function MemberList({
     setDataList(nextData);
   };
 
-  const handleForward = () => {
-    setPage((prev) => Math.max(prev - 1, 1));
-  };
-
-  const handleNext = () => {
-    setPage((prev) => (prev !== lastPage ? prev + 1 : prev));
-  };
-
   useEffect(() => {
     getData();
-  }, [page]);
+  }, [currentPage]);
 
   return (
     <>
@@ -58,13 +53,12 @@ export default function MemberList({
 
       <div className="absolute right-9 top-8">
         <span className="mr-4 text-sm">
-          {lastPage || 1} 페이지 중 {page}
+          {lastPage || 1} 페이지 중 {currentPage}
         </span>
-        <PageButton
-          goToForward={handleForward}
-          goToNext={handleNext}
-          currentPage={page}
-          totalPage={lastPage}
+        <Pagination
+          paramKey={paramKey}
+          currentPage={currentPage}
+          lastPage={lastPage}
         />
       </div>
     </>

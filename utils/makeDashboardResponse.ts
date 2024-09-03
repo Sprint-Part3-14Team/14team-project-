@@ -1,25 +1,14 @@
-import { TEAM_BASE_URL } from '@/constants/TEAM_BASE_URL';
+import { getDashboard } from '@/app/(dashboard)/mydashboard/actions';
 import { DashboardDetail } from '@/types/dashboard';
 
 // NOTE: 대시보드 중복 제거 후 원하는 사이즈로 맞추는 함수
 export default async function makeDashboardArr(
   arr: DashboardDetail[],
   page: number,
-  size: number,
-  token?: string
+  size: number
 ): Promise<DashboardDetail[]> {
-  const url = `${TEAM_BASE_URL}/dashboards?navigationMethod=pagination&page=${page + 1}&size=${size}`;
-
   async function reFetch() {
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await res.json();
+    const data = await getDashboard(page + 1);
     const { dashboards } = data;
     return dashboards;
   }
@@ -39,7 +28,7 @@ export default async function makeDashboardArr(
   arr.push(...checkDashboard);
 
   if (arr.length < 6) {
-    makeDashboardArr(arr, page + 1, size - arr.length, token);
+    makeDashboardArr(arr, page + 1, size - arr.length);
   }
 
   return arr;

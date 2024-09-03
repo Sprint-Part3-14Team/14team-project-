@@ -1,12 +1,12 @@
 'use client';
 
-import PageButton from '@/app/components/pagination/page-button';
-import { TEAM_BASE_URL } from '@/constants/TEAM_BASE_URL';
+import Pagination from '@/app/components/pagination/pagination';
 import { DashboardDetail } from '@/types/dashboard';
 import makeDashboardArr from '@/utils/makeDashboardResponse';
-import { getCookie } from 'cookies-next';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { getDashboard } from '../actions';
 import DashboardCard from './dashboard-card';
 
 interface DashboardListProps {
@@ -18,24 +18,15 @@ export default function DashboardList({
   initialData,
   lastPage,
 }: DashboardListProps) {
-  const [page, setPage] = useState(1);
   const [dashboardList, setDashboardList] =
     useState<DashboardDetail[]>(initialData);
+  const searchParams = useSearchParams();
 
-  const token = getCookie('token');
+  const paramKey = 'boardPage';
+  const currentPage = Number(searchParams.get(paramKey)) || 1;
 
   async function getData() {
-    const url = `${TEAM_BASE_URL}/dashboards?navigationMethod=pagination&page=${page}&size=6`;
-
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await res.json();
+    const data = await getDashboard(currentPage);
     const { dashboards } = data;
 
     const checkDashboard: DashboardDetail[] = dashboards.reduce(
@@ -49,13 +40,12 @@ export default function DashboardList({
     );
 
     // NOTE: 6개 이하일 경우(=중복 데이터 존재) 함수 호출
-    if (checkDashboard.length < 6 && dashboards.length >= 6) {
+    if (checkDashboard.length < 6 && dashboards.length > 6) {
       setDashboardList(
         await makeDashboardArr(
           checkDashboard,
-          page,
-          6 - checkDashboard.length,
-          token
+          currentPage,
+          6 - checkDashboard.length
         )
       );
       return;
@@ -64,17 +54,9 @@ export default function DashboardList({
     setDashboardList(checkDashboard);
   }
 
-  const handleForward = () => {
-    setPage((prev) => Math.max(prev - 1, 1));
-  };
-
-  const handleNext = () => {
-    setPage((prev) => (prev < lastPage ? prev + 1 : prev));
-  };
-
   useEffect(() => {
     getData();
-  }, [page]);
+  }, [currentPage]);
 
   return (
     <>
@@ -86,13 +68,12 @@ export default function DashboardList({
 
       <div className="mb-11 mt-3 text-right">
         <span className="mr-4">
-          {lastPage} 페이지 중 {page}
+          {lastPage} 페이지 중 {currentPage}
         </span>
-        <PageButton
-          goToForward={handleForward}
-          goToNext={handleNext}
-          currentPage={page}
-          totalPage={lastPage}
+        <Pagination
+          paramKey={paramKey}
+          currentPage={currentPage}
+          lastPage={lastPage}
         />
       </div>
     </>
