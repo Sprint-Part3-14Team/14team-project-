@@ -5,8 +5,7 @@ import search from '@/public/icons/search.svg';
 import { Invitation, InvitationResponse } from '@/types/invitations';
 import { debounce } from '@/utils/debounce';
 import Image from 'next/image';
-import React, { useEffect, useState } from 'react';
-import { useInView } from 'react-intersection-observer';
+import { useEffect, useRef, useState } from 'react';
 
 import { getInvitations } from '../actions';
 import InvitationList from './invitation-list';
@@ -24,10 +23,9 @@ export default function InvitationContainer({
     useState<Invitation[]>(initialInvitations);
   const [apiCursorId, setApiCursorId] = useState(initialCursorId);
   const [searchWord, setSearchWord] = useState<string>('');
-  const { ref, inView } = useInView();
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   async function loadMore() {
-    // NOTE - 더 이상 로드할 데이터가 없는 경우
     if (apiCursorId === null) return;
 
     const data: InvitationResponse = await getInvitations(
@@ -37,7 +35,6 @@ export default function InvitationContainer({
     );
     const { invitations, cursorId } = data;
 
-    // NOTE - 새 데이터를 기존 데이터에 추가하고 cursorId를 업데이트
     setInvitationList((prevInvitations) => [
       ...prevInvitations,
       ...invitations,
@@ -69,10 +66,29 @@ export default function InvitationContainer({
   }, [searchWord]);
 
   useEffect(() => {
-    if (inView) {
-      loadMore();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '0px',
+        threshold: 1.0,
+      }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
     }
-  }, [inView]);
+
+    return () => {
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current);
+      }
+    };
+  }, [apiCursorId, searchWord]);
 
   return (
     <>
@@ -102,7 +118,7 @@ export default function InvitationContainer({
           setInvitationList={setInvitationList}
           setApiCursorId={setApiCursorId}
         />
-        <div ref={ref} />
+        <div ref={loadMoreRef} />
       </ul>
     </>
   );
